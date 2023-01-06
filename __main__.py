@@ -48,7 +48,7 @@ def main ():
     # TODO: split pages in chunks to allow multiprocessing
         
     # Loop through csv rows
-    data = ["page", "emails", "phones"]
+    data = [["page", "emails", "phones"]]
     for page in pages:
         
         # Format page
@@ -74,22 +74,22 @@ def main ():
         soup = BeautifulSoup(res.text, "html.parser")
         
         # Get phone and email with css selectors
-        emails += list(map(lambda email: email["href"], soup.select('[href^="mailto:"]')))
-        phones += list(map(lambda phone: phone["href"], soup.select('[href^="tel:"]')))
-        
-        # Clean scraped data
-        emails = list(map(format_email, emails))
-        phones = list(map(format_phone, phones))
+        emails += list(set(map(lambda email: email["href"], soup.select('[href^="mailto:"]'))))
+        phones += list(set(map(lambda phone: phone["href"], soup.select('[href^="tel:"]'))))
         
         # TODO: Get phone and email with regex if there are not found with css selectors
         
         # TODO: Get phone and email with selenium if there are not found with regex
         
+        # Format emails and phones
+        emails = list(map(format_email, emails))
+        phones = list(map(format_phone, phones))
+        
         # Save found data
         data.append ([page, " ".join(emails), " ".join(phones)])
 
     # Save data to csv file when finished
-    with open (csv_output_path, "w", encoding='UTF-8') as file:
+    with open (csv_output_path, "w", encoding='UTF-8', newline="") as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
