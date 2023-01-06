@@ -4,7 +4,26 @@ import requests
 from bs4 import BeautifulSoup
 from scraping_manager.automate import Web_scraping
 
+def format_email (email:str):
+    """ Format email address, removing extra words """
+    email_words = email.split(" ")
+    for word in email_words:
+        if "@" in word:
+            return word
+        
+def format_phone (phone:str):
+    """ Clean phone number, removing extra characters """
+
+    clean_phone = ""
+    for char in str(phone):
+        if char.isnumeric():
+            clean_phone += char
+    return clean_phone
+    
+
 def main (): 
+    """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
+    
     # csv path
     csv_path = os.path.join(os.path.dirname(__file__), "pages.csv")
     if not os.path.isfile(csv_path):
@@ -38,9 +57,16 @@ def main ():
         # Get phone and email with css selectors
         found_emails += list(map(lambda email: email.get_text(), soup.select('[href^="mailto:"]')))
         found_phones += list(map(lambda phone: phone.get_text(), soup.select('[href^="tel:"]')))
-        print ()
         
-
+        # Clean scraped data
+        found_emails = list(map(format_email, found_emails))
+        found_phones = list(map(format_phone, found_phones))
+        
+        # TODO: Get phone and email with regex
+        
+        # TODO: Get phone and email with selenium
+        
+        print ()
 
 if __name__ == "__main__":
     main()
