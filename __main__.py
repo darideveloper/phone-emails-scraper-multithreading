@@ -10,12 +10,14 @@ def main ():
         return ""
     
     # Read csv file content
-    with open (csv_path, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter = ",")
-        csv_rows = set(list(csv_reader))
+    with open (csv_path, "r") as file:
+        pages = file.readlines()
         
     # Loop through csv rows
-    for (page, ) in csv_rows:
+    for page in pages:
+        
+        page = page.strip()
+        
         print (page)
 
 
