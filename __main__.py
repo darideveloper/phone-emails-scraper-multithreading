@@ -69,19 +69,21 @@ def scrape_pages (pages, thread_num, data):
             # Skipo to next page
             continue
         
+        res_text_formated = res.text.replace("<", "\n<")
+        
         # Parse page to bs4
         if res.status_code != 200:
             print (f"(thread {thread_num}) Error scraping page: " + page)
             continue
         print (f"(thread {thread_num}) Scraping page: " + page)
-        soup = BeautifulSoup(res.text, "html.parser")
+        soup = BeautifulSoup(res_text_formated, "html.parser")
         
         # Get phone and email with requests selectors
         emails = list(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
         phones = list(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
         
         # Get phone and email with regex if there are not found with css selectors
-        body_text = soup.get_text()
+        body_text = soup.find("body").getText()
         emails_regex = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
         emails += re.findall(emails_regex, body_text)
         phone_regex = re.compile(r"(\+?\d{1,3}[\s.-]?\(?\d{2,3}\)?[\s.-]?\d{3}[\s.-]?\d{4})")

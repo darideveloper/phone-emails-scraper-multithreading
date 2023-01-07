@@ -11,4 +11,4 @@ settings.py
 db.*
 *.sqlite3
 *.pyc
-pages.csv
+*.csv
