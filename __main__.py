@@ -47,7 +47,7 @@ def split (pages, threads):
     for start in range(0, len(pages), chunk_size):
         yield pages[start:start + chunk_size]
 
-def scrape (pages, thread_num):
+def scrape_pages (pages, thread_num, data):
     
     # Start scraper
     scraper = None
@@ -56,7 +56,6 @@ def scrape (pages, thread_num):
         scraper = Web_scraping(headless=True)
     
     # Loop through csv rows
-    data = [["page", "emails", "phones"]]
     for page in pages:
         
         # Format page
@@ -94,17 +93,12 @@ def scrape (pages, thread_num):
             emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
             phones += scraper.get_attribs(SELECTOR_PHONE, "href")
         
-        # Format emails and phones
-        emails = set(map(format_email, set(emails)))
-        phones = set(map(format_phone, set(phones)))
+        # Format emails and phones using function and removing empty values
+        emails = set(filter(lambda email: email, map(format_email, set(emails))))
+        phones = set(filter(lambda phone: phone, map(format_phone, set(phones))))
         
         # Save found data
         data.append ([page, " ".join(emails), " ".join(phones)])
-
-    # Save data to csv file when finished
-    with open (CSV_OUTPUT_PATH, "w", encoding='UTF-8', newline="") as file:
-        writer = csv.writer(file)
-        writer.writerows(data)
     
 
 def main (): 
@@ -120,13 +114,28 @@ def main ():
         pages = list(set(file.readlines()))
     
     # Create threads
+    data = [["page", "emails", "phones"]]
     pages_threads = list(split(pages, THREADS))
+    threads_objs = []
     for pages_thread in pages_threads:
         sleep (0.1)
         index = pages_threads.index(pages_thread) + 1
         print ("Starting thread " + str(index) + " of " + str(len(pages_threads)))
-        thread_obj = threading.Thread(target=scrape, args=(pages_thread, index))
+        thread_obj = threading.Thread(target=scrape_pages, args=(pages_thread, index, data))
         thread_obj.start ()
+        threads_objs.append (thread_obj)
+        
+    # Wait for threads to finish
+    while True:
+        sleep (1)
+        running_threads = list(filter (lambda thread: thread.is_alive(), threads_objs))
+        if not running_threads:
+            break
+        
+    # Save data to csv file when finished
+    with open (CSV_OUTPUT_PATH, "w", encoding='UTF-8', newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
     
 
 if __name__ == "__main__":
