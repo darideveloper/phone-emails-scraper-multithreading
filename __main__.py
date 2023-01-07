@@ -1,7 +1,10 @@
 import os
 import re
 import csv
+import math
 import requests
+import threading
+from time import sleep
 from bs4 import BeautifulSoup
 from scraping_manager.automate import Web_scraping
 from dotenv import load_dotenv
@@ -15,6 +18,8 @@ SELECTOR_EMAIL = '[href^="mailto:"]'
 SELECTOR_PHONE = '[href^="tel:"]'
 USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
 THREADS = int(os.getenv("THREADS", 1))
+CSV_INPUT_PATH = os.path.join(os.path.dirname(__file__), "pages.csv")
+CSV_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "output.csv")
 
 def format_email (email:str):
     """ Format email address, removing extra words """
@@ -36,30 +41,20 @@ def format_phone (phone:str):
         if char.isnumeric():
             clean_phone += char
     return clean_phone
-    
-def main (): 
-    """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
+
+def split (pages, threads):
+    chunk_size = math.ceil(len(pages) / threads)
+    for start in range(0, len(pages), chunk_size):
+        yield pages[start:start + chunk_size]
+
+def scrape (pages, thread_num):
     
     # Start scraper
     scraper = None
     if USE_SELENIUM:
+        print (f"(thread {thread_num}) chrome started in background")
         scraper = Web_scraping(headless=True)
     
-    # csv paths
-    csv_input_path = os.path.join(os.path.dirname(__file__), "pages.csv")
-    csv_output_path = os.path.join(os.path.dirname(__file__), "output.csv")
-    
-    # Validate input file
-    if not os.path.isfile(csv_input_path):
-        print ("File 'pages.csv' not found")
-        return ""
-    
-    # Read csv file content
-    with open (csv_input_path, "r") as file:
-        pages = set(file.readlines())
-        
-    # TODO: split pages in chunks to allow multiprocessing
-        
     # Loop through csv rows
     data = [["page", "emails", "phones"]]
     for page in pages:
@@ -77,9 +72,9 @@ def main ():
         
         # Parse page to bs4
         if res.status_code != 200:
-            print ("Error scraping page: " + page)
+            print (f"(thread {thread_num}) Error scraping page: " + page)
             continue
-        print ("Scraping page: " + page)
+        print (f"(thread {thread_num}) Scraping page: " + page)
         soup = BeautifulSoup(res.text, "html.parser")
         
         # Get phone and email with requests selectors
@@ -107,9 +102,32 @@ def main ():
         data.append ([page, " ".join(emails), " ".join(phones)])
 
     # Save data to csv file when finished
-    with open (csv_output_path, "w", encoding='UTF-8', newline="") as file:
+    with open (CSV_OUTPUT_PATH, "w", encoding='UTF-8', newline="") as file:
         writer = csv.writer(file)
         writer.writerows(data)
+    
+
+def main (): 
+    """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
+    
+    # Validate input file
+    if not os.path.isfile(CSV_INPUT_PATH):
+        print ("File 'pages.csv' not found")
+        return ""
+    
+    # Read csv file content
+    with open (CSV_INPUT_PATH, "r") as file:
+        pages = list(set(file.readlines()))
+    
+    # Create threads
+    pages_threads = list(split(pages, THREADS))
+    for pages_thread in pages_threads:
+        sleep (0.1)
+        index = pages_threads.index(pages_thread) + 1
+        print ("Starting thread " + str(index) + " of " + str(len(pages_threads)))
+        thread_obj = threading.Thread(target=scrape, args=(pages_thread, index))
+        thread_obj.start ()
+    
 
 if __name__ == "__main__":
     main()
