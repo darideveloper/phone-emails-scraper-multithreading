@@ -3,8 +3,8 @@
 <!--
 *** Thanks for checking out the Best-README-Template. If you have a suggestion
 *** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
+*** or simply open an issue with the tag "enhancement".****
+*** Don't forget to give the project a star!****
 *** Thanks again! Now go create something AMAZING! :D
 -->
 
@@ -22,13 +22,13 @@
 <br />
 <div align="center">
   <a href="https://github.com/darideveloper/europeanstartups_scraper">
-    <img src="imgs/logo.png" alt="Logo" width="200" height="80">
+    <img src="imgs/logo.png" alt="Logo" width="120" height="120">
   </a>
 
-<h3 align="center">Europeanstartups Scraper</h3>
+<h3 align="center">Phone Emails Scraper Multithreading</h3>
 
   <p align="center">
-    Python scraper for extract data from the page <a href="https://app.europeanstartups.co/companies.startups/f/data_type/anyof_Verified/regions/allof_European%20Union">https://app.europeanstartups.co/companies.startups/f/data_type/anyof_Verified/regions/allof_European%20Union</a>, using python, and a google chrome data with a premium account already logged.
+    Project for extract emails and phones from a list of web pages, with multithreading, using requests, bs4, regex and selenium for get more data.
     <br />
     <a href="https://github.com/darideveloper/europeanstartups_scraper/issues">Report Bug</a>
     ·
@@ -68,35 +68,15 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Web page Screenshot][product-screenshot]](webpage)
+This project is for extract emails and phones from a list of web pages, with multithreading, using requests, bs4, regex and selenium for get more data.
 
-The project extract all results from the page [https://app.europeanstartups.co/companies.startups/f/data_type/anyof_Verified/regions/allof_European%20Union](https://app.europeanstartups.co/companies.startups/f/data_type/anyof_Verified/regions/allof_European%20Union), and save the output data in a csv file.
+The script extract emails and phones from the web pages in the `input .txt` file, and save the output in the `output.csv` file.
 
-The project is a python script, that use a google chrome data with a premium account already logged, to extract the data from the page.
+The script use multithreading for extract data from the web pages faster.
 
-The data extract is:
+The script use selenium (google chrome) for get more data from the web pages, because some web pages use javascript to show the data. You can use or not it (see the `USE_SELENIUM` variable in the `.env` file).
 
-* NAME
-* DEALROOM SIGNAL
-* MARKET
-* TYPE
-* LAUNCH DATE
-* VALUATION
-* FUNDING
-* LOCATION
-* LAST ROUND
-* REVENUE
-* STATUS
-* GROWTH STAGE
-* EMPLOYEES
-* OWNERSHIP
-* MARKET CAP
-* DEBT
-* URL WEBSITE
-* LINKEDIN PROFILE
-* TWITTER PROFILE
-* FIRM VALUATION
-* TAGS
+You can setup the number of threads in the `.env` file (see the `THREADS` variable).
 
 ### Built With
 
@@ -104,9 +84,6 @@ The data extract is:
 <div>
 <a href="https://www.python.org/">
   <img src="https://cdn.svgporn.com/logos/python.svg" width="50" alt="python" title="python">
-</a>
-<a href="https://www.selenium.dev/">
-  <img src="https://cdn.svgporn.com/logos/selenium.svg" width="50" alt="selenium" title="selenium">
 </a>
 
 <!-- GETTING STARTED -->
@@ -130,31 +107,26 @@ To get a local copy up and running follow these simple example steps.
    ```sh
    python -m pip install -r requirements.txt 
    ```
-3. Update your chrome path in the `.env` file (note: the chrome path is the folder where chrome data its installed)
-   ```js
-   CHROME_PATH = C:\Users\<<your-user-name>>\AppData\Local\Google\Chrome\User Data
-   ```
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-1. Go to https://app.europeanstartups.co/companies.startups/f/data_type/anyof_Verified/regions/allof_European%20Union and create an account (if you have problems with your email, try with a [proton email](https://proton.me/es/mail))
-2. Activate the premium trial or buy a premium account
-3. be sure to keep the account logged in the browser.
-4. Open a terminal in the project folder
-5. Run the project folder with python: 
+1. Set your option in the file `.env`
+2. Put the web pages in the `input.csv` file
+3. Run the project folder with python: 
     ```sh
     python .
     ```
-6. Wait until the script finish, and check the `output.csv` file in the project folder (note: while the script its running, you can't use google chrome).
+4. Wait until the script finish, and check the `output.csv` file in the project folder
 
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Use chrome data fro avoid login in the page
-- [x] Extract all data from the page
-- [x] Save output data in csv file 
+- [x] Extract email and phone using requests and bs4
+- [x] Extract email and phone using regex
+- [x] Extract email and phone using selenium
+- [x] Multithreading
+- [x] `.env` file fro options
 
 See the [open issues](https://github.com/darideveloper/europeanstartups_scraper/issues) for a full list of proposed features (and known issues).
 
@@ -210,4 +182,4 @@ Project Link: [https://github.com/darideveloper/europeanstartups_scraper](https:
 [gmail-shield]: https://img.shields.io/badge/-gmail-black.svg?style=for-the-badge&logo=gmail&colorB=555&logoColor=white
 [fiverr-shield]: https://img.shields.io/badge/-fiverr-black.svg?style=for-the-badge&logo=fiverr&colorB=555&logoColor=white
 
-<span>Last code update: <time datetime="2022-11-29" class="last-update">2022-11-29</time>
+<span>Last code update: <time datetime="2022-11-29" class="last-update">2023-01-06</time>
