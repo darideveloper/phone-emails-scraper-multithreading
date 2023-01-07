@@ -75,19 +75,26 @@ def main ():
         print ("Scraping page: " + page)
         soup = BeautifulSoup(res.text, "html.parser")
         
-        # Get phone and email with css selectors
-        emails = set(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
-        phones = set(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
+        # Get phone and email with requests selectors
+        emails = list(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
+        phones = list(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
+        
+        # Get phone and email with regex if there are not found with css selectors
+        body_text = soup.get_text()
+        emails_regex = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
+        emails += re.findall(emails_regex, body_text)
+        phone_regex = re.compile(r"(\+?\d{1,3}[\s.-]?\(?\d{2,3}\)?[\s.-]?\d{3}[\s.-]?\d{4})")
+        phones += re.findall(phone_regex, body_text)
         
         # Get phone and email with selenium if there are not found with regex
         if not emails and not phones:
             scraper.set_page(page)
-            emails_selenium = scraper.get_attribs(SELECTOR_EMAIL, "href")
-            phones_selenuim = scraper.get_attribs(SELECTOR_PHONE, "href")
+            emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
+            phones += scraper.get_attribs(SELECTOR_PHONE, "href")
         
         # Format emails and phones
-        emails = list(map(format_email, emails))
-        phones = list(map(format_phone, phones))
+        emails = set(map(format_email, set(emails)))
+        phones = set(map(format_phone, set(phones)))
         
         # Save found data
         data.append ([page, " ".join(emails), " ".join(phones)])
