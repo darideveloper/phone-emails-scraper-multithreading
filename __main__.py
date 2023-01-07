@@ -19,7 +19,7 @@ SELECTOR_EMAIL = '[href^="mailto:"]'
 SELECTOR_PHONE = '[href^="tel:"]'
 USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
 THREADS = int(os.getenv("THREADS", 1))
-CSV_INPUT_PATH = os.path.join(os.path.dirname(__file__), "pages.csv")
+CSV_INPUT_PATH = os.path.join(os.path.dirname(__file__), "input.csv")
 CSV_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "output.csv")
 
 def format_email (email:str):
