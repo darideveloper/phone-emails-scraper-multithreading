@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import requests
 from bs4 import BeautifulSoup
@@ -7,6 +8,8 @@ from scraping_manager.automate import Web_scraping
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 }
+SELECTOR_EMAIL = '[href^="mailto:"]'
+SELECTOR_PHONE = '[href^="tel:"]'
 
 def format_email (email:str):
     """ Format email address, removing extra words """
@@ -32,6 +35,9 @@ def format_phone (phone:str):
 def main (): 
     """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
     
+    # Start scraper
+    scraper = Web_scraping(headless=True)
+    
     # csv paths
     csv_input_path = os.path.join(os.path.dirname(__file__), "pages.csv")
     csv_output_path = os.path.join(os.path.dirname(__file__), "output.csv")
@@ -56,10 +62,6 @@ def main ():
         if not "http" in page:
             page = "https://" + page
             
-        # variables for storage results
-        emails = []
-        phones = []
-            
         try:
             res = requests.get(page, headers=HEADERS)
         except Exception as err:
@@ -74,12 +76,14 @@ def main ():
         soup = BeautifulSoup(res.text, "html.parser")
         
         # Get phone and email with css selectors
-        emails += list(set(map(lambda email: email["href"], soup.select('[href^="mailto:"]'))))
-        phones += list(set(map(lambda phone: phone["href"], soup.select('[href^="tel:"]'))))
+        emails = set(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
+        phones = set(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
         
-        # TODO: Get phone and email with regex if there are not found with css selectors
-        
-        # TODO: Get phone and email with selenium if there are not found with regex
+        # Get phone and email with selenium if there are not found with regex
+        if not emails and not phones:
+            scraper.set_page(page)
+            emails_selenium = scraper.get_attribs(SELECTOR_EMAIL, "href")
+            phones_selenuim = scraper.get_attribs(SELECTOR_PHONE, "href")
         
         # Format emails and phones
         emails = list(map(format_email, emails))
