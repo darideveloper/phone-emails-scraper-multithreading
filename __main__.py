@@ -4,12 +4,17 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 from scraping_manager.automate import Web_scraping
+from dotenv import load_dotenv
+
+load_dotenv ()
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 }
 SELECTOR_EMAIL = '[href^="mailto:"]'
 SELECTOR_PHONE = '[href^="tel:"]'
+USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
+THREADS = int(os.getenv("THREADS", 1))
 
 def format_email (email:str):
     """ Format email address, removing extra words """
@@ -36,7 +41,9 @@ def main ():
     """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
     
     # Start scraper
-    scraper = Web_scraping(headless=True)
+    scraper = None
+    if USE_SELENIUM:
+        scraper = Web_scraping(headless=True)
     
     # csv paths
     csv_input_path = os.path.join(os.path.dirname(__file__), "pages.csv")
@@ -87,7 +94,7 @@ def main ():
         phones += re.findall(phone_regex, body_text)
         
         # Get phone and email with selenium if there are not found with regex
-        if not emails and not phones:
+        if scraper and (not emails or not phones):
             scraper.set_page(page)
             emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
             phones += scraper.get_attribs(SELECTOR_PHONE, "href")
