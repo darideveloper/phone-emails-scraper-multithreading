@@ -4,6 +4,7 @@ import csv
 import math
 import requests
 import threading
+from logs import logger
 from time import sleep
 from bs4 import BeautifulSoup
 from scraping_manager.automate import Web_scraping
@@ -52,7 +53,7 @@ def scrape_pages (pages, thread_num, data):
     # Start scraper
     scraper = None
     if USE_SELENIUM:
-        print (f"(thread {thread_num}) chrome started in background")
+        logger.info (f"(thread {thread_num}) chrome started in background")
         scraper = Web_scraping(headless=True)
     
     # Loop through csv rows
@@ -73,9 +74,9 @@ def scrape_pages (pages, thread_num, data):
         
         # Parse page to bs4
         if res.status_code != 200:
-            print (f"(thread {thread_num}) Error scraping page: " + page)
+            logger.warning (f"(thread {thread_num}) Page don't work: " + page)
             continue
-        print (f"(thread {thread_num}) Scraping page: " + page)
+        logger.info (f"(thread {thread_num}) Scraping page: " + page)
         soup = BeautifulSoup(res_text_formated, "html.parser")
         
         # Get phone and email with requests selectors
@@ -108,7 +109,7 @@ def main ():
     
     # Validate input file
     if not os.path.isfile(CSV_INPUT_PATH):
-        print ("File 'pages.csv' not found")
+        logger.info ("File 'pages.csv' not found")
         return ""
     
     # Read csv file content
@@ -122,7 +123,7 @@ def main ():
     for pages_thread in pages_threads:
         sleep (0.1)
         index = pages_threads.index(pages_thread) + 1
-        print ("Starting thread " + str(index) + " of " + str(len(pages_threads)))
+        logger.info ("Starting thread " + str(index) + " of " + str(len(pages_threads)))
         thread_obj = threading.Thread(target=scrape_pages, args=(pages_thread, index, data))
         thread_obj.start ()
         threads_objs.append (thread_obj)
