@@ -2,6 +2,7 @@ import os
 import re
 import csv
 import math
+import time
 import requests
 import threading
 from logs import logger
@@ -21,6 +22,7 @@ SELECTOR_PHONE = '[href^="tel:"]'
 USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
 THREADS = int(os.getenv("THREADS", 1))
 DEEP_SCRAPING = os.getenv("DEEP_SCRAPING", "").lower() == "true"
+WAIT_TIME = int(os.getenv("WAIT_TIME", 0))
 CSV_INPUT_PATH = os.path.join(os.path.dirname(__file__), "input.csv")
 CSV_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "output.csv")
 
@@ -110,6 +112,7 @@ def get_soup (page:str, thread_num:int):
         page = "https://" + page
         
     try:
+        time.sleep(WAIT_TIME)
         res = requests.get(page, headers=HEADERS)
     except Exception as err:
         # Skipo to next page
