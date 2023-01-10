@@ -9,6 +9,7 @@ from time import sleep
 from bs4 import BeautifulSoup
 from scraping_manager.automate import Web_scraping
 from dotenv import load_dotenv
+import urllib.parse
 
 load_dotenv ()
 
@@ -19,6 +20,7 @@ SELECTOR_EMAIL = '[href^="mailto:"]'
 SELECTOR_PHONE = '[href^="tel:"]'
 USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
 THREADS = int(os.getenv("THREADS", 1))
+DEEP_SCRAPING = os.getenv("DEEP_SCRAPING", "").lower() == "true"
 CSV_INPUT_PATH = os.path.join(os.path.dirname(__file__), "input.csv")
 CSV_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "output.csv")
 
@@ -48,7 +50,90 @@ def split (pages, threads):
     for start in range(0, len(pages), chunk_size):
         yield pages[start:start + chunk_size]
 
-def scrape_pages (pages, thread_num, data):
+def get_subpages (soup:BeautifulSoup, page:str):
+    """ Get all subpages in the current page
+
+    Args:
+        soup (BeautifulSoup): bs4 instance of the current page
+        page (str): link of the current page
+
+    Returns:
+        list: list of subpages (included the current page)
+    """
+    
+    if page.endswith("/"):
+        page = page[:-1]
+    
+    # Get comain of current page
+    domain = page.split("/")[0] 
+    if not "https" in domain:
+        domain = "https://" + domain
+    domain_clean = domain.replace("http://", "").replace("https://", "")
+    
+    # Get all links in page
+    # selector_links = f'[href~="{domain}"]' 
+    selector_links = f'[href]:not({SELECTOR_EMAIL}):not({SELECTOR_PHONE}):not([href="#"])' 
+    links_elems = soup.select(selector_links)
+    links = list(map(lambda link: f'{page}{link["href"].replace("//", "")}' if "www" in link or "http" in link else link["href"], soup.select(selector_links)))
+    
+    # Filter links to get only subpages
+    suffixes = ("/", ".html", ".php")
+    links_subpages = set(filter(lambda page: domain_clean in page and (
+        page.endswith("/") or
+        page.endswith(".com") or
+        page.endswith(".org") or
+        page.endswith(".php") or
+        page.endswith(".html")         
+        ), links))
+    
+    # Add original page to subpages
+    if not domain in links_subpages:
+        links_subpages.add (domain)
+    
+    # Format links
+    links_subpages = set (map(lambda page: page if page.endswith("/") else page+"/", links_subpages))
+    
+    return list(links_subpages)
+    
+def get_soup (page:str, thread_num:int):
+    """ Get the bs4 instance of a page
+
+    Args:
+        page (str): link of the page
+
+    Returns:
+        BeautifulSoup: bs4 instance of the page
+    """
+    
+    page = page.strip()
+    if not "http" in page:
+        page = "https://" + page
+        
+    try:
+        res = requests.get(page, headers=HEADERS)
+    except Exception as err:
+        # Skipo to next page
+        return None
+    
+    res_text_formated = res.text.replace("<", "\n<")
+    
+    # Parse page to bs4
+    if res.status_code != 200:
+        logger.warning (f"(thread {thread_num})     Page don't work: " + page)
+        return None
+    
+    soup = BeautifulSoup(res_text_formated, "html.parser")
+    
+    return soup
+
+def scrape_pages (pages:list, thread_num:int, data:list):
+    """ Extract data from specific pages in a thread
+
+    Args:
+        pages (list): list of pages to scrape
+        thread_num (int): number of the current thread
+        data (list): list where data will be saved
+    """
     
     # Start scraper
     scraper = None
@@ -59,57 +144,70 @@ def scrape_pages (pages, thread_num, data):
     # Loop through csv rows
     for page in pages:
         
-        # Format page
-        page = page.strip()
-        if not "http" in page:
-            page = "https://" + page
+        page = page.replace("\n", "")
+        
+        logger.info (f"(thread {thread_num})   scanning subpages of {page}")
+        
+        # Get bs4 instance
+        soup = get_soup (page, thread_num)
+        if not soup:
+            continue
+        
+        # Get subpages in current page
+        subpages = get_subpages (soup, page)
+        
+        emails = []
+        phones = []
+        for subpage in subpages:
             
-        try:
-            res = requests.get(page, headers=HEADERS)
-        except Exception as err:
-            # Skipo to next page
-            continue
-        
-        res_text_formated = res.text.replace("<", "\n<")
-        
-        # Parse page to bs4
-        if res.status_code != 200:
-            logger.warning (f"(thread {thread_num}) Page don't work: " + page)
-            continue
-        logger.info (f"(thread {thread_num}) Scraping page: " + page)
-        soup = BeautifulSoup(res_text_formated, "html.parser")
-        
-        # Get phone and email with requests selectors
-        emails = list(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
-        phones = list(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
-        
-        # Get phone and email with regex if there are not found with css selectors
-        body_text = soup.find("body").getText()
-        emails_regex = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
-        emails += re.findall(emails_regex, body_text)
-        phone_regex = re.compile(r"(\+?\d{1,3}[\s.-]?\(?\d{2,3}\)?[\s.-]?\d{3}[\s.-]?\d{4})")
-        phones += re.findall(phone_regex, body_text)
-        
-        # Get phone and email with selenium if there are not found with regex
-        if scraper and (not emails or not phones):
-            scraper.set_page(page)
-            emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
-            phones += scraper.get_attribs(SELECTOR_PHONE, "href")
-        
-        # Format emails and phones using function and removing empty values
-        emails = set(filter(lambda email: email, map(format_email, set(emails))))
-        phones = set(filter(lambda phone: phone, map(format_phone, set(phones))))
-        
+            soup = get_soup (subpage, thread_num)
+            
+            # Skip for request if page don't work
+            if soup:
+                
+                logger.info (f"(thread {thread_num}) Scraping page: {subpage}")
+                    
+                # Get phone and email with requests selectors
+                emails += list(map(lambda email: email["href"], soup.select(SELECTOR_EMAIL)))
+                phones += list(map(lambda phone: phone["href"], soup.select(SELECTOR_PHONE)))    
+                
+                # Get phone and email with regex if there are not found with css selectors
+                body = soup.find("body")
+                
+                if not body:
+                    continue
+                
+                body_text = body.getText()
+                emails_regex = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
+                emails += re.findall(emails_regex, body_text)
+                phone_regex = re.compile(r"(\+?\d{1,3}[\s.-]?\(?\d{2,3}\)?[\s.-]?\d{3}[\s.-]?\d{4})")
+                phones += re.findall(phone_regex, body_text)
+            
+            # Get phone and email with selenium if there are not found with regex
+            if scraper and (not emails or not phones):
+                logger.info (f"(thread {thread_num}) Scraping page with chrome: {subpage}")
+                scraper.set_page(page)
+                emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
+                phones += scraper.get_attribs(SELECTOR_PHONE, "href")
+            
+            # Format emails and phones using function and removing empty values
+            emails = list(set(filter(lambda email: email, map(format_email, set(emails)))))
+            phones = list(set(filter(lambda phone: phone, map(format_phone, set(phones)))))
+            
+            # End loop if emails and phones are found, when DEEP_SCRAPING is false
+            if emails and phones and not DEEP_SCRAPING:
+                break
+            
         # Save found data
         data.append ([page, " ".join(emails), " ".join(phones)])
     
 
 def main (): 
-    """ Scrape pages from "pages.csv" file and save results to "output.csv" file """
+    """ Scrape pages from "input.csv" file and save results to "output.csv" file """
     
     # Validate input file
     if not os.path.isfile(CSV_INPUT_PATH):
-        logger.info ("File 'pages.csv' not found")
+        logger.info ("File 'input.csv' not found")
         return ""
     
     # Read csv file content
