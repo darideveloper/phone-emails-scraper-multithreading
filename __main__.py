@@ -67,10 +67,7 @@ def get_subpages (soup:BeautifulSoup, page:str):
         page = page[:-1]
     
     # Get comain of current page
-    domain = page.split("/")[0] 
-    if not "https" in domain:
-        domain = "https://" + domain
-    domain_clean = domain.replace("http://", "").replace("https://", "")
+    domain = page.replace("http://", "").replace("https://", "").split("/")[0]
     
     # Get all links in page
     # selector_links = f'[href~="{domain}"]' 
@@ -80,7 +77,7 @@ def get_subpages (soup:BeautifulSoup, page:str):
     
     # Filter links to get only subpages
     suffixes = ("/", ".html", ".php")
-    links_subpages = set(filter(lambda page: domain_clean in page and (
+    links_subpages = set(filter(lambda page: domain in page and (
         page.endswith("/") or
         page.endswith(".com") or
         page.endswith(".org") or
@@ -89,8 +86,8 @@ def get_subpages (soup:BeautifulSoup, page:str):
         ), links))
     
     # Add original page to subpages
-    if not domain in links_subpages:
-        links_subpages.add (domain)
+    if not page in links_subpages:
+        links_subpages.add (page)
     
     # Format links
     links_subpages = set (map(lambda page: page if page.endswith("/") else page+"/", links_subpages))
@@ -146,6 +143,9 @@ def scrape_pages (pages:list, thread_num:int, data:list):
     
     # Loop through csv rows
     for page in pages:
+        
+        if not "https" in page:
+            page = "https://" + page
         
         page = page.replace("\n", "")
         
