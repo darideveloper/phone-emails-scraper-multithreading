@@ -8,7 +8,7 @@ import threading
 from logs import logger
 from time import sleep
 from bs4 import BeautifulSoup
-from scraping_manager.automate import Web_scraping
+from scraping_manager.web_scraping import WebScraping
 from dotenv import load_dotenv
 import urllib.parse
 
@@ -139,7 +139,7 @@ def scrape_pages (pages:list, thread_num:int, data:list):
     scraper = None
     if USE_SELENIUM:
         logger.info (f"(thread {thread_num}) chrome started in background")
-        scraper = Web_scraping(headless=True)
+        scraper = WebScraping(headless=True)
     
     # Loop through csv rows
     for page in pages:
