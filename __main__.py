@@ -8,9 +8,7 @@ import threading
 from logs import logger
 from time import sleep
 from bs4 import BeautifulSoup
-from scraping_manager.web_scraping import WebScraping
 from dotenv import load_dotenv
-import urllib.parse
 
 load_dotenv ()
 
@@ -19,7 +17,6 @@ HEADERS = {
 }
 SELECTOR_EMAIL = '[href^="mailto:"]'
 SELECTOR_PHONE = '[href^="tel:"]'
-USE_SELENIUM = os.getenv("USE_SELENIUM", "").lower() == "true"
 THREADS = int(os.getenv("THREADS", 1))
 DEEP_SCRAPING = os.getenv("DEEP_SCRAPING", "").lower() == "true"
 WAIT_TIME = int(os.getenv("WAIT_TIME", 0))
@@ -135,12 +132,6 @@ def scrape_pages (pages:list, thread_num:int, data:list):
         data (list): list where data will be saved
     """
     
-    # Start scraper
-    scraper = None
-    if USE_SELENIUM:
-        logger.info (f"(thread {thread_num}) chrome started in background")
-        scraper = WebScraping(headless=True)
-    
     # Loop through csv rows
     for page in pages:
         
@@ -185,13 +176,6 @@ def scrape_pages (pages:list, thread_num:int, data:list):
                 emails += re.findall(emails_regex, body_text)
                 phone_regex = re.compile(r"(\+?\d{1,3}[\s.-]?\(?\d{2,3}\)?[\s.-]?\d{3}[\s.-]?\d{4})")
                 phones += re.findall(phone_regex, body_text)
-            
-            # Get phone and email with selenium if there are not found with regex
-            if scraper and (not emails or not phones):
-                logger.info (f"(thread {thread_num}) Scraping page with chrome: {subpage}")
-                scraper.set_page(page)
-                emails += scraper.get_attribs(SELECTOR_EMAIL, "href")
-                phones += scraper.get_attribs(SELECTOR_PHONE, "href")
             
             # Format emails and phones using function and removing empty values
             emails = list(set(filter(lambda email: email, map(format_email, set(emails)))))
